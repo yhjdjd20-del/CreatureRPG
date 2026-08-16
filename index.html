@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Cyber RPG">
+    <title>CyberFantasy RPG - Ultimate Bugfix</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0a0b10; --card: #121420; --text: #fff; --muted: #8b92a5;
+            --purp: #7a00ff; --pink: #ff007a; --cyan: #00f2fe; --gold: #ffd700;
+            --crys: #ff00ff; --pwr: #ff4d4d; --shards: #00ffcc;
+            --r-com: #8e9eab; --r-rar: #00d2ff; --r-epi: #9d50bb; --r-leg: #f5af19;
+            --trans: all 0.3s ease;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body { font-family: 'Montserrat', sans-serif; background: var(--bg); color: var(--text); position: fixed; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
+        canvas#particles { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; }
+        
+        #toast-container { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: rgba(18,20,32,0.95); border-left: 4px solid var(--cyan); padding: 15px 20px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 15px; animation: slideIn 0.3s forwards, fadeOut 0.5s forwards 3s; }
+        @keyframes slideIn { from{transform:translateX(100%);opacity:0;} to{transform:translateX(0);opacity:1;} }
+        @keyframes fadeOut { from{opacity:1;} to{opacity:0;transform:translateY(20px);} }
+
+        header { background: rgba(18,20,32,0.95); backdrop-filter: blur(10px); padding: max(12px, env(safe-area-inset-top)) 15px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); z-index: 100; flex-shrink: 0; }
+        .header-top { width: 100%; max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        h1 { font-family: 'Orbitron', sans-serif; font-size: 16px; background: linear-gradient(90deg, var(--cyan), var(--pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .resources { display: flex; gap: 10px; font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700; flex-wrap: wrap; justify-content: flex-end; }
+        .res { display: flex; align-items: center; gap: 4px; }
+        
+        .tabs { display: flex; justify-content: flex-start; gap: 5px; overflow-x: auto; max-width: 1200px; margin: 0 auto; padding-bottom: 4px; scrollbar-width: none; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab-btn { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--muted); padding: 6px 12px; border-radius: 16px; font-family: inherit; font-weight: 600; font-size: 11px; cursor: pointer; transition: var(--trans); white-space: nowrap; flex-shrink: 0; }
+        .tab-btn.active { background: rgba(255,255,255,0.1); color: var(--text); border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,242,254,0.3); }
+
+        main { flex-grow: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; width: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: max(40px, env(safe-area-inset-bottom)); }
+        .tab-content { width: 100%; max-width: 1200px; animation: fadeIn 0.3s; }
+        .hidden { display: none !important; }
+
+        .panel { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; }
+        .flex-wrap { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+        
+        .summon-btn { border: none; padding: 15px 25px; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; color: #fff; transition: var(--trans); }
+        .summon-btn b { font-size: 14px; font-weight: 800; text-transform: uppercase; }
+        .summon-btn span { font-size: 13px; font-weight: 700; opacity: 0.9; }
+        .summon-btn:active:not(:disabled) { transform: scale(0.95); }
+        .summon-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); }
+        .btn-n { background: linear-gradient(135deg, #2980b9, #2c3e50); box-shadow: 0 0 15px rgba(41, 128, 185, 0.4); } 
+        .btn-e { background: linear-gradient(135deg, #8e44ad, #c0392b); box-shadow: 0 0 15px rgba(142, 68, 173, 0.4); }
+        
+        .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; width: 100%; }
+        .card { background: var(--card); border-radius: 16px; border: 2px solid; position: relative; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: transform 0.3s, box-shadow 0.3s; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.8); z-index: 5; }
+        .c-com { border-color: var(--r-com); } .c-rar { border-color: var(--r-rar); box-shadow: 0 0 10px rgba(0,210,255,0.2); } .c-epi { border-color: var(--r-epi); box-shadow: 0 0 15px rgba(157,80,187,0.3); } .c-leg { border-width: 3px; border-color: var(--r-leg); box-shadow: 0 0 20px var(--r-leg); }
+        
+        .c-lvl { position: absolute; top: 10px; left: 10px; background: var(--gold); color: #000; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; z-index: 2; }
+        .c-head { padding: 25px 15px 15px; text-align: center; }
+        .c-name { font-size: 16px; font-weight: 800; line-height: 1.2; }
+        .badge-r { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
+        .c-stats { padding: 0 15px 15px; display: flex; flex-direction: column; gap: 8px; }
+        .s-row { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; margin-bottom: 2px; }
+        .p-bar { width: 100%; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+        .p-fill { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: 0%; }
+        
+        .c-foot { background: rgba(0,0,0,0.3); padding: 10px; text-align: center; font-size: 11px; color: var(--gold); font-weight: bold; border-top: 1px solid rgba(255,215,0,0.1); }
+        .c-acts { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid rgba(255,255,255,0.1); }
+        .c-btn { background: transparent; border: none; padding: 12px; font-weight: 700; font-size: 10px; text-transform: uppercase; cursor: pointer; color: var(--text); }
+        .c-btn:disabled { color: var(--muted); cursor: not-allowed; }
+        
+        .art-slot { background: rgba(255,255,255,0.05); border: 1px dashed var(--muted); border-radius: 8px; margin: 0 15px 15px; padding: 10px; text-align: center; font-size: 11px; cursor: pointer; color: var(--cyan); transition: var(--trans); }
+        .art-equipped { border-style: solid; border-color: var(--cyan); background: rgba(0,242,254,0.1); color: var(--text); }
+
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; }
+        .modal.active { opacity: 1; pointer-events: all; }
+        .m-box { background: var(--card); border: 1px solid var(--cyan); padding: 25px; border-radius: 16px; width: 90%; max-width: 450px; text-align: center; max-height: 85vh; overflow-y: auto; transform: scale(0.8); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal.active .m-box { transform: scale(1); }
+        
+        .r-win { width: 100%; height: 80px; margin: 10px auto; overflow: hidden; border: 2px solid var(--cyan); border-radius: 12px; position: relative; background: #000; box-shadow: inset 0 0 30px rgba(0,0,0,0.8); }
+        .r-win::before { content:''; position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; background: var(--pwr); z-index: 10; transform: translateX(-50%); box-shadow: 0 0 15px red; }
+        .r-track { display: flex; height: 100%; align-items: center; }
+        .r-it { min-width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid #222; opacity: 0.5; }
+        .r-it.target { opacity: 1; }
+        .r-it i { font-size: 30px; margin-bottom: 8px; }
+        .r-it span { font-size: 9px; font-weight: bold; white-space: nowrap; }
+
+        .battle-arena { display: flex; flex-direction: column; gap: 15px; }
+        .b-side { background: rgba(0,0,0,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .b-hp-bar { width: 100%; height: 20px; background: #333; border-radius: 10px; overflow: hidden; margin-top: 10px; border: 2px solid #000; position: relative; }
+        .b-hp-fill { height: 100%; background: #2ecc71; transition: width 0.2s; }
+        .b-hp-text { position: absolute; width: 100%; text-align: center; top: 2px; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 3px #000; }
+        
+        .btn-gen { background: var(--cyan); color: #000; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: var(--trans); }
+        .btn-gen:disabled { background: #444; color: #888; cursor: not-allowed; }
+        .btn-gen:active:not(:disabled) { transform: scale(0.95); }
+        
+        .grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .box { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); text-align: center; }
+        .box i { font-size: 24px; margin-bottom: 8px; color: var(--cyan); }
+        .box h4 { font-size: 13px; font-weight: 800; }
+        .box div { font-size: 10px; color: var(--muted); margin-top: 5px; }
+        
+        .case-btn { background: linear-gradient(45deg, #f12711, #f5af19); border: none; padding: 15px 30px; border-radius: 12px; color: white; font-weight: 900; font-size: 16px; cursor: pointer; box-shadow: 0 0 20px rgba(245,175,25,0.4); animation: pulse 2s infinite; }
+        @keyframes pulse { 0%{transform:scale(1);} 50%{transform:scale(1.05);} 100%{transform:scale(1);} }
+        @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+        
+        .tgl-btn { background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); color:var(--text); display:flex; justify-content:space-between; align-items:center; width:100%; padding:15px; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:600; font-size:13px; transition:var(--trans); }
+        .tgl-btn:active { transform:scale(0.98); }
+    </style>
+</head>
+<body>
+
+    <canvas id="particles"></canvas>
+    <div id="toast-container"></div>
+
+    <header>
+        <div class="header-top">
+            <h1>CYBER RPG</h1>
+            <div class="resources">
+                <div class="res" style="color:var(--gold)"><i class="fa-solid fa-coins"></i> <span id="r-g">0</span></div>
+                <div class="res" style="color:var(--crys)"><i class="fa-solid fa-gem"></i> <span id="r-c">0</span></div>
+                <div class="res" style="color:var(--pwr)"><i class="fa-solid fa-khanda"></i> <span id="r-p">0</span></div>
+            </div>
+        </div>
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="t-gen">Инкубатор</button>
+            <button class="tab-btn" data-tab="t-col" id="tb-col">Коллекция</button>
+            <button class="tab-btn" data-tab="t-syn">Синергии</button>
+            <button class="tab-btn" data-tab="t-bes">Бестиарий</button>
+            <button class="tab-btn" data-tab="t-ach">Ачивки</button>
+            <button class="tab-btn" data-tab="t-shp">Рынок</button>
+            <button class="tab-btn" data-tab="t-tal">Таланты</button>
+            <button class="tab-btn" data-tab="t-exp">Экспедиции</button>
+            <button class="tab-btn" data-tab="t-bos">Боссы</button>
+            <button class="tab-btn" data-tab="t-pre">Настройки</button>
+        </nav>
+    </header>
+
+    <main id="main-area">
+        <div id="t-gen" class="tab-content">
+            <div class="panel flex-wrap">
+                <button class="summon-btn btn-n" id="b-sum-n"><b>Обычный Свиток</b><span><i class="fa-solid fa-coins"></i> <span id="cst-n">10</span></span></button>
+                <button class="summon-btn btn-e" id="b-sum-e"><b>Элитный Свиток</b><span><i class="fa-solid fa-gem"></i> <span id="cst-e">5</span></span></button>
+            </div>
+            <div style="font-size:12px; color:var(--gold); text-align:center; font-weight:bold;">Гарант Леги через: <span id="pity-txt">30</span> призывов</div>
+            <div id="gen-stage" style="margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 15px;"></div>
+            <div style="text-align: center; margin-top: 15px;"><button class="btn-gen hidden" id="b-save" style="background:#2ecc71; color:white; width:100%; max-width:280px;"><i class="fa-solid fa-download"></i> Сохранить</button></div>
+        </div>
+
+        <div id="t-col" class="tab-content hidden">
+            <div class="panel flex-wrap" style="padding:10px; justify-content: space-between;">
+                <select id="filter-rarity" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:6px; border-radius:6px; outline:none; font-family:inherit; font-size:12px;">
+                    <option value="all">Все редкости</option><option value="Обычный">Обычные</option><option value="Редкий">Редкие</option><option value="Эпический">Эпические</option><option value="Легендарный">Легендарные</option>
+                </select>
+                <select id="sort-type" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:6px; border-radius:6px; outline:none; font-family:inherit; font-size:12px;">
+                    <option value="new">Новые</option><option value="inc">По доходу</option><option value="lvl">По уровню</option>
+                </select>
+            </div>
+            <div class="grid-cards" id="col-grid"></div>
+        </div>
+
+        <div id="t-syn" class="tab-content hidden">
+            <div class="panel"><h3 style="text-align:center; color:var(--cyan); margin-bottom:10px;">Активные связи</h3><p style="font-size:12px; color:var(--muted); text-align:center; margin-bottom:15px;">3 одинаковых Основы = +20% Мощь. 3 одинаковых Префикса = +20% Доход.</p><div class="grid-auto" id="syn-grid"></div></div>
+        </div>
+
+        <div id="t-bes" class="tab-content hidden">
+            <h2 style="text-align:center; margin-bottom: 20px; color:var(--cyan);">Энциклопедия Существ</h2>
+            <div class="grid-auto" id="bestiary-grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));"></div>
+        </div>
+
+        <div id="t-ach" class="tab-content hidden">
+            <h2 style="text-align:center; margin-bottom: 20px; color:var(--gold);">Достижения</h2>
+            <div class="panel" style="display:flex; flex-direction:column; gap:10px;" id="achievements-wrapper"></div>
+        </div>
+
+        <div id="t-shp" class="tab-content hidden" style="text-align:center;">
+            <div class="panel">
+                <h3 style="color:var(--pink); margin-bottom:10px;">Промокоды</h3>
+                <input type="text" id="promo-input" placeholder="Код..." style="padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.5); color:#fff; width:100%; font-size:14px; text-align:center; margin-bottom:10px; outline:none;">
+                <button class="btn-gen" style="background:var(--pink); width: 100%;" onclick="ui.claimPromo()">Активировать</button>
+            </div>
+            <h2 style="margin-top: 20px;"><i class="fa-solid fa-store"></i> Кейсы</h2>
+            <div class="panel flex-wrap">
+                <!-- БАГФИКС 4: Добавлены ID кнопкам покупки кейсов для их блокировки при нехватке денег -->
+                <button class="summon-btn btn-n" id="b-case-g" onclick="if(g.buyCase('gold')) ui.rdA();"><b>Купить Кейс</b><span><i class="fa-solid fa-coins"></i> 150 000</span></button>
+                <button class="summon-btn btn-e" id="b-case-c" onclick="if(g.buyCase('crys')) ui.rdA();"><b>Элитный Кейс</b><span><i class="fa-solid fa-gem"></i> 500</span></button>
+            </div>
+            <h2 style="margin: 20px 0 15px; color:#f5af19;"><i class="fa-solid fa-box-open"></i> Ваши Кейсы: <span id="case-cnt">0</span></h2>
+            <button class="case-btn" id="b-open-case">ОТКРЫТЬ КЕЙС</button>
+            <h3 style="margin-top: 30px; color: var(--cyan);">Склад Артефактов</h3>
+            <div class="grid-auto" id="art-grid" style="margin-top: 15px;"></div>
+        </div>
+
+        <div id="t-tal" class="tab-content hidden">
+            <h2 style="text-align:center; margin-bottom: 20px; color:var(--crys)">Дерево Навыков</h2>
+            <div class="grid-auto" id="tal-grid" style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));"></div>
+        </div>
+
+        <div id="t-exp" class="tab-content hidden">
+            <div class="panel" style="text-align:center;">
+                <h3 style="color:var(--gold)">Отправка отряда</h3>
+                <p style="font-size:12px; color:var(--muted); margin:10px 0;">Существо уходит на разведку за Кристаллами и Кейсами.</p>
+                <button class="btn-gen" onclick="ui.opnS('exp')">Выбрать бойца</button>
+            </div>
+            <div id="exp-active" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+
+        <div id="t-bos" class="tab-content hidden">
+            <div class="grid-cards" id="bos-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"></div>
+        </div>
+
+        <div id="t-pre" class="tab-content hidden" style="text-align:center;">
+            
+            <div class="panel" style="max-width: 600px; margin: 0 auto 20px;">
+                <h3 style="color:var(--cyan); margin-bottom:15px;"><i class="fa-solid fa-gear"></i> Системные настройки</h3>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button class="tgl-btn" onclick="ui.tglCfg('snd')">
+                        <span><i class="fa-solid fa-volume-high"></i> Звуковые эффекты</span> <span id="cfg-snd-st" style="font-weight:900;">ВКЛ</span>
+                    </button>
+                    <button class="tgl-btn" onclick="ui.tglCfg('fx')">
+                        <span><i class="fa-solid fa-wand-magic-sparkles"></i> Анимации и частицы</span> <span id="cfg-fx-st" style="font-weight:900;">ВКЛ</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel" style="max-width: 600px; margin: 0 auto 20px;">
+                <h2 style="color:var(--shards)"><i class="fa-solid fa-infinity"></i> Престиж</h2>
+                <p style="font-size:12px; margin: 10px 0; color:#ccc;">Сбросьте Золото, Кристаллы, Коллекцию и Боссов. Ачивки, Артефакты и Таланты остаются! 1 Осколок = +10% к Мощи и Доходу.</p>
+                <div style="font-size:14px; font-weight:bold; margin-bottom:15px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px;">Осколки: <span id="p-cur" style="color:var(--shards)">0</span> | Дадут при сбросе: <span id="p-gn" style="color:var(--shards);">0</span></div>
+                <button class="btn-gen" style="background:var(--shards); width:100%" onclick="if(confirm('Сбросить мир для получения осколков?')) { if(g.prstg()) { ui.rdA(); } }">СБРОС СИМУЛЯЦИИ</button>
+            </div>
+            
+            <div class="panel" style="max-width: 600px; margin: 0 auto 20px;">
+                <h3 style="color:var(--gold)"><i class="fa-solid fa-floppy-disk"></i> Сохранения (Облако)</h3>
+                <p style="font-size:12px; color:var(--muted); margin:10px 0;">Скопируй код сохранения, чтобы не потерять прогресс или передать другу.</p>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-gen" style="flex:1; background:#3498db" onclick="ui.expS()">Экспорт</button>
+                    <button class="btn-gen" style="flex:1; background:#e67e22" onclick="ui.impS()">Импорт</button>
+                </div>
+            </div>
+
+            <div class="panel" style="max-width: 600px; margin: 0 auto; border-color:var(--pwr);">
+                <h3 style="color:var(--pwr)"><i class="fa-solid fa-triangle-exclamation"></i> Опасная зона</h3>
+                <p style="font-size:12px; color:var(--muted); margin:10px 0;">Полное удаление всех данных браузера. Отменить невозможно.</p>
+                <button class="btn-gen" style="width:100%; background:transparent; color:var(--pwr); border:1px solid var(--pwr);" onclick="if(confirm('ВНИМАНИЕ! Это полностью удалит ВЕСЬ прогресс, осколки, донат и ачивки. Вы уверены?')) { localStorage.removeItem('cybrpg_v12'); location.reload(); }"><i class="fa-solid fa-skull"></i> УДАЛИТЬ СОХРАНЕНИЕ</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Модалки -->
+    <div class="modal" id="m-bat">
+        <div class="m-box">
+            <h2 id="mb-title" style="color:var(--pwr); margin-bottom:20px;">БИТВА</h2>
+            <div class="battle-arena">
+                <div class="b-side"><div style="color:var(--cyan); font-size:12px;"><b>Армия</b> (DPS: <span id="mb-pdps">0</span>)</div><div class="b-hp-bar"><div class="b-hp-fill" id="mb-php-f"></div><div class="b-hp-text" id="mb-php-t">0</div></div></div>
+                <div style="font-size:24px; font-weight:900; color:var(--pwr)">VS</div>
+                <div class="b-side" style="border-color:var(--pwr);"><div style="color:var(--pwr); font-size:12px;"><b>Враг</b> (DPS: <span id="mb-bdps">0</span>)</div><div class="b-hp-bar"><div class="b-hp-fill" id="mb-bhp-f" style="background:var(--pwr);"></div><div class="b-hp-text" id="mb-bhp-t">0</div></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="m-sel">
+        <div class="m-box">
+            <h3 id="ms-title" style="margin-bottom:15px; font-size: 16px; color: var(--cyan);">Выбор</h3>
+            <div style="display:flex; flex-direction:column; gap:10px; max-height: 50vh; overflow-y:auto;" id="ms-list"></div>
+            <button class="btn-gen" style="margin-top:15px; background:var(--pwr); width: 100%;" onclick="document.getElementById('m-sel').classList.remove('active')">Закрыть</button>
+        </div>
+    </div>
+
+    <div class="modal" id="m-case">
+        <div class="m-box" style="overflow: hidden; padding: 20px;">
+            <h2 style="color:var(--gold); font-size:16px; margin-bottom: 10px;"><i class="fa-solid fa-box-open"></i> Дешифровка...</h2>
+            <div class="r-win"><div class="r-track" id="r-track"></div></div>
+            <div id="r-res" class="hidden" style="margin-top: 15px; animation: fadeIn 0.5s;"></div>
+        </div>
+    </div>
+    
+    <div class="modal" id="m-dail">
+        <div class="m-box" style="border-color:var(--gold)">
+            <i class="fa-solid fa-calendar-check" style="font-size:40px; color:var(--gold); margin-bottom:15px;"></i>
+            <h2 style="color:var(--gold); margin-bottom:10px;">Ежедневная награда!</h2>
+            <p style="font-size:13px; color:var(--muted); margin-bottom:20px;">Вы заходите <span id="md-str" style="color:var(--text); font-weight:bold;">1</span> дн. подряд.</p>
+            <div style="background:rgba(0,0,0,0.5); padding:15px; border-radius:10px; margin-bottom:20px; font-size:18px; font-weight:bold;" id="md-rew"></div>
+            <button class="btn-gen" style="width:100%; background:var(--gold)" onclick="document.getElementById('m-dail').classList.remove('active')">Забрать</button>
+        </div>
+    </div>
+
+    <script>
+        const DB = {
+            pre: ["Космический", "Древний", "Кибер", "Теневой", "Пылающий", "Радиоактивный", "Кристальный", "Неоновый", "Грозовой", "Священный", "Базированный", "Соевый", "Кринжовый", "Чилловый", "Шлёпающий"],
+            suf: ["Бездны", "Хаоса", "Света", "Смерти", "Вечности", "Разрушения", "Иллюзий", "Стали", "Бури", "Возмездия", "с Госуслуг", "из ТикТока", "с завода", "из Твиттера", "из Даркнета"],
+            bas: [
+                "Дракон", "Голем", "Слайм", "Феникс", "Грифон", "Кракен", "Элементаль", "Цербер", "Минотавр", "Левиафан", "Василиск", "Пегас", "Единорог", "Выверна", "Горгулья",
+                "Скуф", "Альтушка", "Масик", "Тюбик", "Шлёпа", "Пельмень", "Капибара", "Гигачад", "Сигма", "Гуль zxc", "Шайлушай", "Чмоня", "Амогус", "Пепе", "Подпивас",
+                "Чебоксарец", "Сырок Александров", "Огузок", "Шаурмяу", "Кот-батон", "Дед Гарольд", "Мистер Исключительный", "Кринге", "Ждун", "Чикибамбони", "Думер", "Зумер", "Бумер", "Дерево с глазами", "Бархатные тяги"
+            ],
+            desc: {
+                "Дракон": "Легендарный крылатый ящер, повелевающий стихией.", "Голем": "Каменный страж древних цивилизаций.", "Слайм": "Желейный сгусток магии.", "Феникс": "Птица, возрождающаяся из пепла.", "Грифон": "Свирепый гибрид льва и орла.", "Кракен": "Кошмар морских глубин.", "Элементаль": "Чистая стихийная энергия.", "Цербер": "Трехглавый страж врат.", "Минотавр": "Яростный страж лабиринтов.", "Левиафан": "Исполинский океанский змей.", "Василиск": "Змей с окаменяющим взглядом.", "Пегас": "Крылатый небесный конь.", "Единорог": "Священное существо чистоты.", "Выверна": "Ядовитый родственник драконов.", "Горгулья": "Оживающая каменная статуя.",
+                "Скуф": "Мужчина 40+ с пивным пузом и ипотекой. Иммун к депрессии.", "Альтушка": "Девушка с окрашенными волосами из Госуслуг.", "Масик": "Парнишка, за которого всё платят.", "Тюбик": "Хрупкий доминант в очках.", "Шлёпа": "Большой русский кот, любитель пельменей.", "Пельмень": "Идеальная форма жизни из морозилки.", "Капибара": "Просто парень, живущий на чиле.", "Гигачад": "Абсолютный пик мужской эволюции.", "Сигма": "Одинокий волк, который ни перед кем не отчитывается.", "Гуль zxc": "Дедлайнер 1000-7, живущий в Dota 2.", "Шайлушай": "Синий лесной гном с грибом на голове.", "Чмоня": "Маленький грустный комочек хаоса.", "Амогус": "Подозрительный член экипажа.", "Пепе": "Лягушка на все случаи жизни.", "Подпивас": "Мастер танков в сессионках по вечерам.",
+                "Чебоксарец": "Неуловимый житель столицы Чувашии.", "Сырок Александров": "Элитный десерт с премиум-шоколадом.", "Огузок": "Начинающий повар с кучей амбиций.", "Шаурмяу": "Уличный кот, знающий лучшие точки с мясом.", "Кот-батон": "Мягкая игрушка, ставшая котом.", "Дед Гарольд": "Мужчина с болью в глазах на стоковых фото.", "Мистер Исключительный": "Герой на пенсии, уставший от работы.", "Кринге": "Ощущение испанского стыда во плоти.", "Ждун": "Существо, вечно ждущее патч или доставку.", "Чикибамбони": "Легендарный персонаж непонятного происхождения.", "Думер": "Парень в черном худи под треки Молчат Дома.", "Зумер": "Тот, кто делает Reels быстрее, чем моргает.", "Бумер": "Любитель пересылать картинки в WhatsApp.", "Дерево с глазами": "Лесной наблюдатель за грибниками.", "Бархатные тяги": "Обувь чисто для истинных господ."
+            },
+            ic: {
+                "Дракон":"fa-dragon", "Голем":"fa-mountain", "Слайм":"fa-bacterium", "Феникс":"fa-dove", "Грифон":"fa-feather-alt", "Кракен":"fa-shrimp", "Элементаль":"fa-bolt", "Цербер":"fa-dog", "Минотавр":"fa-skull", "Левиафан":"fa-fish", "Василиск":"fa-otter", "Пегас":"fa-horse-head", "Единорог":"fa-horse", "Выверна":"fa-locust", "Горгулья":"fa-ghost",
+                "Скуф":"fa-beer-mug-empty", "Альтушка":"fa-headphones", "Масик":"fa-heart", "Тюбик":"fa-child", "Шлёпа":"fa-cat", "Пельмень":"fa-cloud-meatball", "Капибара":"fa-hippo", "Гигачад":"fa-user-ninja", "Сигма":"fa-face-grin-stars", "Гуль zxc":"fa-spider", "Шайлушай":"fa-smog", "Чмоня":"fa-cat", "Амогус":"fa-user-astronaut", "Пепе":"fa-frog", "Подпивас":"fa-beer-mug-empty",
+                "Чебоксарец":"fa-user-secret", "Сырок Александров":"fa-cheese", "Огузок":"fa-carrot", "Шаурмяу":"fa-burger", "Кот-батон":"fa-cat", "Дед Гарольд":"fa-face-smile", "Мистер Исключительный":"fa-mask", "Кринге":"fa-face-grimace", "Ждун":"fa-bug", "Чикибамбони":"fa-sheep", "Думер":"fa-headphones", "Зумер":"fa-mobile-screen", "Бумер":"fa-car", "Дерево с глазами":"fa-tree", "Бархатные тяги":"fa-shoe-prints"
+            },
+            sts: [ { n: "Атака", i: "fa-sword", c: "#ff4d4d", t: "atk" }, { n: "Защита", i: "fa-shield", c: "#4d94ff", t: "def" }, { n: "Скорость", i: "fa-bolt", c: "#ffd480", t: "spd" }, { n: "Удача", i: "fa-dice", c: "#4dff88", t: "lck" } ],
+            rr: {
+                "Обычный": { mn: 10, mx: 50, inc: 1, c: "var(--r-com)", cl: "c-com", bg: "background:var(--r-com);color:#000;" },
+                "Редкий": { mn: 45, mx: 70, inc: 3, c: "var(--r-rar)", cl: "c-rar", bg: "background:var(--r-rar);color:#000;" },
+                "Эпический": { mn: 65, mx: 85, inc: 8, c: "var(--r-epi)", cl: "c-epi", bg: "background:var(--r-epi);color:#fff;" },
+                "Легендарный": { mn: 85, mx: 100, inc: 25, c: "var(--r-leg)", cl: "c-leg", bg: "background:linear-gradient(90deg,var(--r-leg),#f12711);color:#fff;" }
+            },
+            arts: [
+                { id: 'a1', n: 'Неоновый Клинок', i: 'fa-sword', t: 'atk', v: 2, d: 'Атака х2' }, { id: 'a2', n: 'Кибер-Щит', i: 'fa-shield', t: 'def', v: 2, d: 'Защита х2' },
+                { id: 'a3', n: 'Монета Бездны', i: 'fa-coins', t: 'inc', v: 2, d: 'Доход х2' }, { id: 'a4', n: 'Ускоритель', i: 'fa-bolt', t: 'spd', v: 2, d: 'Скорость х2' }
+            ],
+            tals: [
+                { id: 't1', n: 'Торговец', d: '-5% цена свитков', c: 10, m: 10 }, { id: 't2', n: 'Командир', d: '+10% Атака', c: 15, m: 10 }, { id: 't3', n: 'Логист', d: '-10% время экспедиций', c: 20, m: 5 }
+            ],
+            bos: [
+                { id: "b1", n: "Меха-Страж", r: 500, cg: 1000, cc: 20, cx: 1, i: "fa-robot" }, { id: "b2", n: "Теневой Змей", r: 3000, cg: 5000, cc: 50, cx: 2, i: "fa-dragon" },
+                { id: "b3", n: "Владыка Бездны", r: 10000, cg: 15000, cc: 100, cx: 3, i: "fa-jedi" }, { id: "b4", n: "Бог Матрицы", r: 50000, cg: 100000, cc: 500, cx: 5, i: "fa-microchip" }
+            ],
+            promos: { "CYBER2026": { g: 1000, c: 50, bx: 1 }, "GIMMEART": { g: 0, c: 0, bx: 3 }, "IAMGOD": { g: 100000, c: 2000, bx: 5 } },
+            achievements: [
+                { id: "a1", t: "Первый ритуал", d: "Призовите существо.", r: 5, chk: s => s.stats.summons > 0 },
+                { id: "a2", t: "Коллекционер", d: "Соберите 10 существ.", r: 10, chk: s => s.col.length >= 10 },
+                { id: "a3", t: "Скуфотренинг", d: "Выбить Скуфа.", r: 15, chk: s => s.disc.includes("Скуф") },
+                { id: "a4", t: "ZXC", d: "Выбить Гуля zxc.", r: 15, chk: s => s.disc.includes("Гуль zxc") },
+                { id: "a5", t: "Основатель", d: "Выбить Гигачада.", r: 25, chk: s => s.disc.includes("Гигачад") }
+            ]
+        };
+
+        const audio = {
+            ctx: null, initOk: false,
+            init() { if(!this.initOk && window.AudioContext) { this.ctx = new AudioContext(); this.initOk = true; } },
+            play(f, t, d, v=0.05) {
+                if(typeof g !== 'undefined' && g.s && g.s.cfg && !g.s.cfg.snd) return;
+                
+                if(!this.ctx) return; if(this.ctx.state==='suspended') this.ctx.resume();
+                try { let o=this.ctx.createOscillator(), ga=this.ctx.createGain(); o.type=t; o.frequency.value=f; ga.gain.setValueAtTime(v, this.ctx.currentTime); ga.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime+d); o.connect(ga); ga.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+d); } catch(e){}
+            },
+            clk() { this.play(600, 'sine', 0.1); }, sum() { this.play(300, 'square', 0.2); setTimeout(()=>this.play(600,'sine',0.4), 100); }, leg() { [400,500,600,800].forEach((f,i)=>setTimeout(()=>this.play(f,'square',0.5, 0.1), i*150)); }, err() { this.play(150, 'sawtooth', 0.2); }, tick() { this.play(800, 'sine', 0.05, 0.02); }
+        };
+        
+        document.body.addEventListener('click', () => { 
+            audio.init(); 
+            if(audio.ctx && audio.ctx.state === 'suspended') audio.ctx.resume(); 
+        }, {once:true});
+
+        const fx = {
+            cv: document.getElementById('particles'), cx: null, ps: [],
+            init() { this.cx = this.cv.getContext('2d'); this.rs(); window.addEventListener('resize', ()=>this.rs()); this.lp(); },
+            rs() { this.cv.width=window.innerWidth; this.cv.height=window.innerHeight; },
+            emit(c, n) { 
+                if(typeof g !== 'undefined' && g.s && g.s.cfg && !g.s.cfg.fx) return;
+                for(let i=0;i<n;i++) this.ps.push({x:window.innerWidth/2, y:window.innerHeight/2, vx:(Math.random()-.5)*15, vy:(Math.random()-.5)*15, l:1, c:c, s:Math.random()*5+2}); 
+            },
+            lp() { 
+                this.cx.clearRect(0,0,this.cv.width,this.cv.height); 
+                for(let i=this.ps.length-1; i>=0; i--) { 
+                    let p=this.ps[i]; p.x+=p.vx; p.y+=p.vy; p.l-=0.02; 
+                    if(p.l<=0){this.ps.splice(i,1);continue;} 
+                    this.cx.globalAlpha=p.l; this.cx.fillStyle=p.c; this.cx.beginPath(); this.cx.arc(p.x,p.y,p.s,0,Math.PI*2); this.cx.fill(); 
+                } 
+                requestAnimationFrame(()=>this.lp()); 
+            }
+        };
+        fx.init();
+
+        const toast = (t, d, i="fa-bell") => {
+            let tc = document.getElementById('toast-container'), el = document.createElement('div');
+            el.className='toast'; el.innerHTML=`<div class="toast-icon"><i class="fa-solid ${i}"></i></div><div><div class="toast-title">${t}</div><div class="toast-desc">${d}</div></div>`;
+            tc.appendChild(el); setTimeout(()=>el.remove(),4000);
+        };
+
+        class Game {
+            constructor() {
+                this.s = {
+                    g: 100, c: 0, sh: 0, bx: 0, col: [], disc: [], arts: [], exp: [],
+                    tal: { t1: 0, t2: 0, t3: 0 }, bos: [], pro: [], ach: [],
+                    pt: 0, ls: Date.now(), stats: { summons: 0, merges: 0 },
+                    lastLog: 0, logStrk: 0, 
+                    cfg: { snd: true, fx: true } 
+                };
+                this.syn = { pwr: 1, inc: 1, list: [] }; this.tmp = null; this.btl = null;
+            }
+            
+            ld() {
+                let sv = localStorage.getItem('cybrpg_v12');
+                if(sv) try { 
+                    let p = JSON.parse(sv); 
+                    this.s = { ...this.s, ...p }; 
+                    this.s.tal = { ...{t1:0,t2:0,t3:0}, ...(p.tal||{}) }; 
+                    this.s.stats = { ...{summons:0, merges:0}, ...(p.stats||{}) }; 
+                    this.s.cfg = { ...{snd:true, fx:true}, ...(p.cfg||{}) }; 
+                } catch(e){}
+                this.s.arts = this.s.arts.filter(a => DB.arts.find(x => x.id === a.id));
+                
+                this.chkExp();
+                
+                // БАГФИКС 1: Синергии (updSyn) ОБЯЗАНЫ рассчитываться до начисления оффлайн-золота,
+                // иначе игрок не получит бонусы от синергий фракций за время сна!
+                this.updSyn();
+                
+                // БАГФИКС 3: Защита от эксплойта "перемотки времени" в настройках телефона (кап 24 часа)
+                let dSec = Math.min((Date.now() - this.s.ls)/1000, 86400);
+                if(dSec > 60 && this.s.col.length > 0) { 
+                    let offInc = this.getInc() * dSec; 
+                    this.s.g += offInc; 
+                    toast("Офлайн прибыль", `Добыто: ${Math.floor(offInc)} золота.`, "fa-clock"); 
+                }
+            }
+            
+            sv() { this.s.ls = Date.now(); localStorage.setItem('cybrpg_v12', JSON.stringify(this.s)); }
+            
+            getInc() {
+                let i = this.s.col.reduce((sm, c) => {
+                    if(this.s.exp.find(e => e.id === c.id)) return sm;
+                    let art = this.s.arts.find(a => a.uid === c.art); 
+                    let dbArt = art ? DB.arts.find(x=>x.id===art.id) : null;
+                    let mult = (dbArt && dbArt.t === 'inc') ? dbArt.v : 1;
+                    let spdMult = (dbArt && dbArt.t === 'spd') ? dbArt.v : 1; 
+                    let spd = c.sts.find(s=>s.t==='spd').v * spdMult; 
+                    return sm + (c.inc * mult * (1 + spd/500));
+                }, 0);
+                return i * this.syn.inc * (1 + this.s.sh * 0.1);
+            }
+            getRawStat(type) {
+                let v = this.s.col.reduce((sm, c) => {
+                    if(this.s.exp.find(e => e.id === c.id)) return sm;
+                    let art = this.s.arts.find(a => a.uid === c.art); let mult = (art && DB.arts.find(x=>x.id===art.id)?.t === type) ? DB.arts.find(x=>x.id===art.id).v : 1;
+                    let st = c.sts.find(s=>s.t===type).v; return sm + (st * mult);
+                }, 0);
+                if(type === 'atk') v *= (1 + (this.s.tal.t2||0) * 0.1) * this.syn.pwr; if(type === 'def') v *= this.syn.pwr; return Math.floor(v);
+            }
+            getStat(type) { return Math.floor(this.getRawStat(type) * (1 + this.s.sh * 0.1)); }
+            
+            updSyn() {
+                let bc={}, pc={}; this.syn.list = []; this.syn.pwr = 1; this.syn.inc = 1; 
+                this.s.col.forEach(c => { bc[c.b]=(bc[c.b]||0)+1; pc[c.p]=(pc[c.p]||0)+1; });
+                for(let k in bc) { let st = Math.floor(bc[k]/3); if(st>0) { this.syn.pwr += 0.2*st; this.syn.list.push(`${st*3}x ${k} (+${st*20}% Мощь)`); } }
+                for(let k in pc) { let st = Math.floor(pc[k]/3); if(st>0) { this.syn.inc += 0.2*st; this.syn.list.push(`${st*3}x ${k} (+${st*20}% Доход)`); } }
+            }
+
+            sum(el) {
+                let dc = 1 - ((this.s.tal.t1 || 0) * 0.05); let cg = Math.floor((el ? 0 : 10) * dc), cc = Math.floor((el ? 5 : 0) * dc);
+                if(this.s.g < cg || this.s.c < cc) { audio.err(); return false; }
+                this.s.g -= cg; this.s.c -= cc; this.s.pt++;
+                let r = (Math.random()*100) + (el?50:0); let k = "Обычный";
+                if(this.s.pt >= 30) { k = "Легендарный"; this.s.pt = 0; } else if(r>98) { k = "Легендарный"; this.s.pt = 0; } else if(r>80) k="Эпический"; else if(r>50) k="Редкий";
+                let d = DB.rr[k], bs = DB.bas[Math.floor(Math.random()*DB.bas.length)], pr = DB.pre[Math.floor(Math.random()*DB.pre.length)], sf = DB.suf[Math.floor(Math.random()*DB.suf.length)];
+                let sts = DB.sts.map(s => ({...s, v: Math.floor(Math.random()*(d.mx-d.mn+1))+d.mn}));
+                if(!this.s.disc.includes(bs)) this.s.disc.push(bs);
+                this.tmp = { id: 'c'+Date.now(), n:`${pr} ${bs} ${sf}`, b:bs, p:pr, r:k, lvl:1, inc:d.inc, sts:sts, art:'' };
+                audio[k==="Легендарный"?'leg':'sum'](); fx.emit(d.c, 30); return true;
+            }
+
+            saveSum() { if(!this.tmp) return; this.s.col.unshift(this.tmp); this.s.stats.summons++; this.tmp = null; this.updSyn(); this.sv(); audio.clk(); }
+            upg(id) { let c = this.s.col.find(x=>x.id===id); if(!c || c.lvl>=5) return; let cst = Math.floor(50 * Math.pow(1.5, c.lvl)); if(this.s.g < cst) { audio.err(); return; } this.s.g -= cst; c.lvl++; c.sts.forEach(s=> s.v=Math.min(100,s.v+2)); this.sv(); audio.clk(); }
+            mrg(id1, id2) {
+                let c1 = this.s.col.find(x=>x.id===id1), c2 = this.s.col.find(x=>x.id===id2); if(!c1||!c2||c1.r!==c2.r||c1.lvl<5||c2.lvl<5||c1.r==="Легендарный") return;
+                let idx = Object.keys(DB.rr).indexOf(c1.r); if(idx >= 3) return;
+                if(c1.art) c1.art = ''; if(c2.art) c2.art = '';
+                this.s.col = this.s.col.filter(x=>x.id!==id1 && x.id!==id2); this.s.stats.merges++;
+                let nk = Object.keys(DB.rr)[idx+1], nd = DB.rr[nk], sts = DB.sts.map(s => ({...s, v: Math.floor(Math.random()*(nd.mx-nd.mn+1))+nd.mn}));
+                let cr = { id: 'c'+Date.now(), n:`Пробужденный ${c1.b}`, b:c1.b, p:"Пробужденный", r:nk, lvl:1, inc:nd.inc, sts:sts, art:'' };
+                this.s.col.unshift(cr); this.updSyn(); this.sv(); audio.sum(); fx.emit(nd.c, 50); toast("Слияние", `Ритуал завершен! Получен ${cr.n}`, "fa-dna");
+            }
+
+            eqp(cId, aUid) { let c = this.s.col.find(x=>x.id===cId); if(!c) return; c.art = aUid; this.sv(); audio.clk(); }
+            buyTalent(tId) { let t = DB.tals.find(x=>x.id===tId), lvl = this.s.tal[tId] || 0; if(lvl >= t.m) return false; let cst = t.c * (lvl + 1); if(this.s.c < cst) { audio.err(); return false; } this.s.c -= cst; this.s.tal[tId] = lvl + 1; this.sv(); audio.clk(); return true; }
+            srtExp(id) { if(this.s.exp.length >= 3) { audio.err(); toast("Ошибка", "Максимум 3 отряда!", "fa-ban"); return; } let dur = 300 - (300 * ((this.s.tal.t3||0) * 0.1)); this.s.exp.push({ id: id, end: Date.now() + dur*1000 }); this.sv(); audio.clk(); toast("Экспедиция", "Боец отправлен на задание", "fa-map"); }
+            chkExp() { let nw = Date.now(), chg = false; for(let i=this.s.exp.length-1; i>=0; i--) { if(nw >= this.s.exp[i].end) { this.s.c += 20; this.s.bx += 1; toast("Возвращение", "Отряд вернулся! +20 Кр, +1 Кейс", "fa-box-open"); this.s.exp.splice(i, 1); chg = true; audio.clk(); } } if(chg) { this.updSyn(); this.sv(); return true; } return false; }
+            buyCase(type) { if(type === 'gold') { if(this.s.g < 150000) { audio.err(); return false; } this.s.g -= 150000; } else if(type === 'crys') { if(this.s.c < 500) { audio.err(); return false; } this.s.c -= 500; } this.s.bx++; this.sv(); audio.clk(); toast("Покупка", "Кейс приобретен!", "fa-box"); return true; }
+            opnBx() { if(this.s.bx <= 0) { audio.err(); return null; } this.s.bx--; let a = DB.arts[Math.floor(Math.random()*DB.arts.length)]; let uid = 'a'+Date.now()+Math.random(); this.s.arts.push({ uid: uid, id: a.id }); this.sv(); return a; }
+
+            stBat(id) {
+                let b = DB.bos.find(x=>x.id===id), atk = this.getStat('atk'), def = this.getStat('def');
+                if((atk+def) < b.r) { toast("Ошибка", "Мощь слишком мала!", "fa-skull"); audio.err(); return; }
+                this.btl = { bid: id, b: b, php: def*10||100, bhp: b.r*5, pdps: atk, bdps: b.r/2 }; this.btl.maxP = this.btl.php; this.btl.maxB = this.btl.bhp; audio.sum();
+            }
+            tkBat() {
+                if(!this.btl) return null; this.btl.php -= this.btl.bdps/5; this.btl.bhp -= this.btl.pdps/5;
+                if(this.btl.php <= 0) { let r = this.btl; this.btl = null; return { w: false }; }
+                if(this.btl.bhp <= 0) { if(!this.s.bos.includes(this.btl.bid)) this.s.bos.push(this.btl.bid); this.s.g += this.btl.b.cg; this.s.c += this.btl.b.cc; this.s.bx += this.btl.b.cx; this.sv(); audio.leg(); fx.emit("#2ecc71", 50); let r = this.btl; this.btl = null; return { w: true, b: r.b }; }
+                return { w: null, st: this.btl };
+            }
+
+            prstg() { 
+                let gn = Math.floor((this.getRawStat('atk') + this.getRawStat('def')) / 10000); 
+                if(gn <= 0) { audio.err(); return false; } 
+                this.s.sh += gn; this.s.g = 100; this.s.c = 0; this.s.bx = 0; 
+                this.s.col = []; this.s.exp = []; this.s.bos = []; this.s.pt = 0; 
+                
+                // БАГФИКС 2: Предотвращаем "контрабанду" существ из инкубатора в новый мир при престиже
+                this.tmp = null;
+                
+                this.updSyn(); this.sv(); audio.leg(); return true; 
+            }
+            prm(cd) { if(this.s.pro.includes(cd) || !DB.promos[cd]) { audio.err(); return false; } this.s.pro.push(cd); let p = DB.promos[cd]; this.s.g+=p.g; this.s.c+=p.c; this.s.bx+=p.bx; this.sv(); audio.sum(); toast("Успех", "Код активирован!", "fa-check"); return true; }
+            
+            chkAch() { 
+                if(!this.s.ach) this.s.ach = [];
+                let chg = false; 
+                DB.achievements.forEach(a => { 
+                    try {
+                        if(!this.s.ach.includes(a.id) && a.chk(this.s)) { 
+                            this.s.ach.push(a.id); 
+                            this.s.c += a.r; 
+                            toast("Ачивка!", `${a.t} (+${a.r} кр)`, "fa-trophy"); 
+                            chg = true; 
+                            audio.clk(); 
+                        } 
+                    } catch(e) {} 
+                }); 
+                if(chg) this.sv(); 
+            }
+            
+            chkDaily() {
+                if (this.s.lastLog === 0) {
+                    this.s.logStrk = 1;
+                    this.s.lastLog = Date.now();
+                    let rwG = 500, rwC = 5; this.s.g += rwG; this.s.c += rwC; this.sv();
+                    return { s: 1, g: rwG, c: rwC };
+                }
+                
+                let nw = new Date(), lst = new Date(this.s.lastLog);
+                let nwDay = Math.floor((nw.getTime() - nw.getTimezoneOffset() * 60000) / 86400000);
+                let lstDay = Math.floor((lst.getTime() - lst.getTimezoneOffset() * 60000) / 86400000);
+                
+                if(nwDay > lstDay) {
+                    if(nwDay - lstDay === 1) this.s.logStrk++; 
+                    else this.s.logStrk = 1;
+                    
+                    this.s.lastLog = nw.getTime();
+                    let rwG = this.s.logStrk * 500, rwC = this.s.logStrk * 5; this.s.g += rwG; this.s.c += rwC; this.sv();
+                    return { s: this.s.logStrk, g: rwG, c: rwC };
+                }
+                return null;
+            }
+        }
+
+        const g = new Game();
+        const ui = {
+            tId: 't-gen', bInt: null, isSpn: false, fRar: 'all', sTyp: 'new',
+            
+            init() {
+                g.ld(); this.bnd(); this.rdA();
+                let ticks = 0;
+                setInterval(()=> { 
+                    if(g.s.col.length > 0) g.s.g += g.getInc(); 
+                    if(g.chkExp()) this.rdA(); else this.rdT(); 
+                    if(this.tId === 't-exp') this.rdE(); 
+                    g.chkAch(); 
+                    
+                    ticks++;
+                    if(ticks % 10 === 0) g.sv();
+                }, 1000);
+                
+                let dly = g.chkDaily();
+                if(dly) {
+                    document.getElementById('md-str').innerText = dly.s;
+                    document.getElementById('md-rew').innerHTML = `<span style="color:var(--gold)">+${dly.g} Зол.</span> | <span style="color:var(--crys)">+${dly.c} Кр.</span>`;
+                    document.getElementById('m-dail').classList.add('active'); audio.leg(); fx.emit("#ffd700", 50);
+                }
+            },
+            bnd() {
+                document.querySelectorAll('.tab-btn').forEach(b => b.onclick = (e) => {
+                    let trg = e.currentTarget; document.querySelectorAll('.tab-content').forEach(c=>c.classList.add('hidden')); document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+                    this.tId = trg.dataset.tab; document.getElementById(this.tId).classList.remove('hidden'); trg.classList.add('active'); this.rdA(); audio.clk();
+                    
+                    if(this.tId !== 't-bos' && this.bInt) { clearInterval(this.bInt); document.getElementById('m-bat').classList.remove('active'); g.btl = null; }
+                });
+                
+                document.getElementById('b-sum-n').onclick = ()=>{ if(g.sum(false)) this.rdG(); };
+                document.getElementById('b-sum-e').onclick = ()=>{ if(g.sum(true)) this.rdG(); };
+                document.getElementById('b-save').onclick = ()=>{ g.saveSum(); this.rdG(); this.rdT(); };
+                
+                document.getElementById('b-open-case').onclick = ()=>{ 
+                    if(this.isSpn) return; 
+                    if(g.s.bx <= 0) { audio.err(); return; } 
+                    this.isSpn = true; 
+                    let res = g.opnBx(); 
+                    this.rdA(); 
+                    if(res) this.stCse(res); 
+                };
+                
+                document.getElementById('filter-rarity').onchange = (e) => { this.fRar = e.target.value; this.rdC(); audio.clk(); }; 
+                document.getElementById('sort-type').onchange = (e) => { this.sTyp = e.target.value; this.rdC(); audio.clk(); };
+                
+                let stX = 0;
+                document.getElementById('main-area').addEventListener('touchstart', e => stX = e.touches[0].clientX, {passive: true});
+                document.getElementById('main-area').addEventListener('touchend', e => {
+                    let dx = e.changedTouches[0].clientX - stX;
+                    if(Math.abs(dx) > 60) {
+                        let tbs = Array.from(document.querySelectorAll('.tab-btn')); let cIdx = tbs.findIndex(t => t.classList.contains('active'));
+                        if(dx > 0 && cIdx > 0) tbs[cIdx-1].click();
+                        if(dx < 0 && cIdx < tbs.length-1) tbs[cIdx+1].click();
+                    }
+                }, {passive: true});
+            },
+            
+            stCse(art) {
+                let m = document.getElementById('m-case'), tr = document.getElementById('r-track'), resDiv = document.getElementById('r-res');
+                resDiv.classList.add('hidden'); m.classList.add('active'); audio.sum();
+                let h = '', tIdx = 30; 
+                for(let i=0; i<45; i++) { let rA = DB.arts[Math.floor(Math.random()*DB.arts.length)]; if(i === tIdx) rA = art; let isT = i === tIdx ? 'target' : ''; let col = i === tIdx ? 'color:var(--gold)' : `color:${rA.c||'var(--muted)'}`; h += `<div class="r-it ${isT}" style="${col}"><i class="fa-solid ${rA.i}"></i><span>${i === tIdx ? '???' : rA.n.split(' ')[0]}</span></div>`; }
+                tr.innerHTML = h; tr.style.transition = 'none'; tr.style.transform = `translateX(0px)`; tr.offsetHeight; 
+                let off = -(tIdx * 80) + 125 + (Math.random() * 30 - 15);
+                let tk = 0, tInt = setInterval(() => { audio.tick(); tk++; if(tk > 30) clearInterval(tInt); }, 100);
+                tr.style.transition = 'transform 3.5s cubic-bezier(0.1, 0.9, 0.2, 1)'; tr.style.transform = `translateX(${off}px)`;
+                setTimeout(() => { clearInterval(tInt); audio.leg(); fx.emit("#ffd700", 60); let tg = tr.querySelector('.target span'); if(tg) tg.innerText = art.n; resDiv.innerHTML = `<h3 style="color:var(--gold); margin-bottom:15px; font-size: 16px;">${art.n}</h3><button class="btn-gen" style="width:100%" onclick="document.getElementById('m-case').classList.remove('active'); ui.rdA();">Забрать</button>`; resDiv.classList.remove('hidden'); this.isSpn = false; }, 3700);
+            },
+            
+            rdT() { 
+                document.getElementById('r-g').innerText = Math.floor(g.s.g); 
+                document.getElementById('r-c').innerText = g.s.c; 
+                document.getElementById('r-p').innerText = Math.floor(g.getStat('atk') + g.getStat('def')); 
+                
+                document.getElementById('tb-col').innerText = `Коллекция (${g.s.col.length})`; 
+                document.getElementById('pity-txt').innerText = 30 - g.s.pt; 
+                let dc = 1 - ((g.s.tal.t1 || 0) * 0.05); 
+                document.getElementById('cst-n').innerText = Math.floor(10 * dc); 
+                document.getElementById('cst-e').innerText = Math.floor(5 * dc); 
+                
+                document.getElementById('b-sum-n').disabled = (g.s.g < 10*dc) || (g.tmp !== null); 
+                document.getElementById('b-sum-e').disabled = (g.s.c < 5*dc) || (g.tmp !== null); 
+                
+                // БАГФИКС 4: Визуальная блокировка кнопок покупки кейсов
+                let bcg = document.getElementById('b-case-g'); if(bcg) bcg.disabled = g.s.g < 150000;
+                let bcc = document.getElementById('b-case-c'); if(bcc) bcc.disabled = g.s.c < 500;
+            },
+            
+            rdA() { this.rdT(); if(this.tId==='t-gen') this.rdG(); if(this.tId==='t-col') this.rdC(); if(this.tId==='t-syn') this.rdS(); if(this.tId==='t-bes') this.rdBes(); if(this.tId==='t-ach') this.rdAch(); if(this.tId==='t-shp') this.rdShp(); if(this.tId==='t-tal') this.rdTl(); if(this.tId==='t-exp') this.rdE(); if(this.tId==='t-bos') this.rdB(); if(this.tId==='t-pre') this.rdP(); },
+            
+            cH(c, isC=false) {
+                let dr = DB.rr[c.r]; let isE = g.s.exp.find(e=>e.id===c.id); let aH = '';
+                if(isC) { let artObj = g.s.arts.find(y=>y.uid===c.art); let dbA = artObj ? DB.arts.find(x=>x.id===artObj.id) : null; if(dbA) aH = `<div class="art-slot art-equipped" onclick="ui.opnS('art', '${c.id}')"><i class="fa-solid ${dbA.i}"></i> ${dbA.n}</div>`; else aH = `<div class="art-slot" onclick="ui.opnS('art', '${c.id}')">+ Слот Артефакта</div>`; }
+                let stH = c.sts.map(s => `<div class="s-row"><span><i class="fa-solid ${s.i}" style="color:${s.c}"></i> ${s.n}</span><span>${s.v}/100</span></div><div class="p-bar"><div class="p-fill" style="background:${s.c}; width:0%" data-v="${s.v}"></div></div>`).join('');
+                let acH = '';
+                if(isC) { if(isE) acH = `<div class="c-foot" style="color:var(--cyan)"><i class="fa-solid fa-map"></i> В ЭКСПЕДИЦИИ</div>`; else { let uc = Math.floor(50 * Math.pow(1.5, c.lvl)); let canM = c.lvl===5 && c.r!=="Легендарный"; acH = `<div class="c-acts">${canM ? `<button class="c-btn" style="color:var(--cyan)" onclick="ui.opnS('mrg','${c.id}')"><i class="fa-solid fa-dna"></i> СЛИЯНИЕ</button>` : `<button class="c-btn" style="color:var(--gold)" onclick="g.upg('${c.id}');ui.rdC();ui.rdT();" ${g.s.g<uc?'disabled':''}>АП (${uc})</button>`}<button class="c-btn" style="color:var(--pwr)" onclick="if(confirm('Удалить навсегда?')) { g.s.col=g.s.col.filter(x=>x.id!=='${c.id}'); g.updSyn(); g.sv(); ui.rdC();ui.rdT(); }"><i class="fa-solid fa-trash"></i></button></div>`; } }
+                return `<div class="card ${dr.cl}" ${isE?'style="opacity:0.6"':''}><div class="c-lvl">${c.lvl}</div><div class="c-head"><span class="badge-r" style="${dr.bg}">${c.r}</span><div class="c-name">${c.n}</div></div><div class="c-stats">${stH}</div>${aH}<div class="c-foot">+${c.inc} зол/сек</div>${acH}</div>`;
+            },
+
+            rdG() { let st = document.getElementById('gen-stage'), btn = document.getElementById('b-save'); if(g.tmp) { st.innerHTML = this.cH(g.tmp); setTimeout(()=>st.querySelectorAll('.p-fill').forEach(e=>e.style.width=e.dataset.v+'%'), 50); btn.classList.remove('hidden'); } else { st.innerHTML = `<div style="text-align:center; padding:40px; color:var(--muted); border: 2px dashed rgba(255,255,255,0.1); border-radius: 12px; width: 100%; max-width: 300px;"><i class="fa-solid fa-wand-magic-sparkles" style="font-size:40px; margin-bottom:15px;"></i><br>Свитки готовы.</div>`; btn.classList.add('hidden'); } },
+            rdC() { let arr = [...g.s.col]; if(this.fRar !== 'all') arr = arr.filter(x => x.r === this.fRar); if(this.sTyp === 'inc') arr.sort((a,b) => b.inc - a.inc); else if(this.sTyp === 'lvl') arr.sort((a,b) => b.lvl - a.lvl); document.getElementById('col-grid').innerHTML = arr.length ? arr.map(c=>this.cH(c,true)).join('') : `<div style="text-align:center; padding:50px; grid-column:1/-1; color:var(--muted)"><i class="fa-solid fa-box-open" style="font-size:50px; margin-bottom:20px;"></i><br>Ничего не найдено.</div>`; setTimeout(()=>document.querySelectorAll('#col-grid .p-fill').forEach(e=>e.style.width=e.dataset.v+'%'), 50); },
+            rdS() { document.getElementById('syn-grid').innerHTML = g.syn.list.length ? g.syn.list.map(x=>`<div class="panel" style="border-color:var(--cyan); color:var(--cyan); margin-bottom:0;"><i class="fa-solid fa-link"></i> ${x}</div>`).join('') : '<div style="color:var(--muted); text-align:center; width:100%;">Нет активных синергий</div>'; },
+            
+            rdBes() {
+                document.getElementById('bestiary-grid').innerHTML = DB.bas.map(b => {
+                    let disc = g.s.disc.includes(b);
+                    let ic = DB.ic[b] || "fa-question";
+                    let desc = DB.desc[b] || "Секретное существо.";
+                    return `<div class="box" style="${disc?'':'filter:grayscale(100%); opacity:0.4;'}"><i class="fa-solid ${disc ? ic : 'fa-question'}" style="font-size:32px; color:var(--cyan); margin-bottom:10px;"></i><h4 style="color:${disc?'var(--text)':'var(--muted)'}">${disc ? b : '???'}</h4><div style="font-size:10px; color:var(--muted); margin-top:5px; line-height: 1.3;">${disc ? desc : 'Не открыто'}</div></div>`;
+                }).join('');
+            },
+
+            rdAch() {
+                document.getElementById('achievements-wrapper').innerHTML = DB.achievements.map(a => {
+                    let got = g.s.ach.includes(a.id);
+                    return `<div style="background:rgba(0,0,0,0.5); padding:12px 15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;"><div><b style="color:var(--gold); font-size:13px;">${a.t}</b><div style="font-size:11px; color:var(--muted); margin-top:2px;">${a.d} <span style="color:var(--crys)">(+${a.r} кр.)</span></div></div>${got ? `<span style="color:#2ecc71; font-weight:bold; font-size:12px;"><i class="fa-solid fa-check"></i> Получено</span>` : `<span style="color:#666; font-size:12px;"><i class="fa-solid fa-lock"></i> Заблокировано</span>`}</div>`;
+                }).join('');
+            },
+
+            rdShp() { document.getElementById('case-cnt').innerText = g.s.bx; let fr = [...g.s.arts].filter(a => !g.s.col.find(c=>c.art===a.uid)); document.getElementById('art-grid').innerHTML = fr.length ? fr.map(a => { let d = DB.arts.find(x=>x.id===a.id); if(!d) return ''; return `<div class="box"><i class="fa-solid ${d.i}" style="color:${d.c||'var(--cyan)'};font-size:24px;margin-bottom:10px"></i><h4>${d.n}</h4><div style="font-size:10px;color:var(--muted);margin-top:5px;">${d.d}</div></div>`; }).join('') : '<div style="color:var(--muted); grid-column:1/-1; text-align:center;">В инвентаре пусто</div>'; },
+            
+            rdTl() { 
+                document.getElementById('tal-grid').innerHTML = DB.tals.map(t => { 
+                    let lvl = g.s.tal[t.id] || 0; 
+                    let mx = lvl >= t.m; 
+                    let cst = t.c * (lvl + 1); 
+                    return `<div class="panel" style="text-align:center; margin-bottom:0;"><h4 style="color:var(--crys); font-size:14px; margin-bottom:5px;">${t.n} (${lvl}/${t.m})</h4><p style="font-size:11px;color:var(--muted);margin-bottom:15px;">${t.d}</p><button class="btn-gen" style="width:100%; font-size:11px;" ${mx||g.s.c<cst?'disabled':''} onclick="if(g.buyTalent('${t.id}')) ui.rdA();"> ${mx?'МАКС': 'Купить ('+cst+' Кр)'} </button></div>`; 
+                }).join(''); 
+            },
+            
+            rdE() { let nw = Date.now(); document.getElementById('exp-active').innerHTML = g.s.exp.length ? g.s.exp.map(e => { let c = g.s.col.find(x=>x.id===e.id); let lt = Math.max(0, Math.floor((e.end - nw)/1000)); return `<div class="panel" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0;"><div style="font-size:12px;"><b>${c.n}</b> (В Пустошах)</div><div style="color:var(--cyan); font-size:12px; font-weight:bold;"><i class="fa-solid fa-clock"></i> ${lt} сек.</div></div>`; }).join('') : '<div style="text-align:center; color:var(--muted); font-size:12px;">Нет активных отрядов</div>'; },
+            rdB() { let pwr = Math.floor(g.getStat('atk') + g.getStat('def')); document.getElementById('bos-grid').innerHTML = DB.bos.map(b => { let def = g.s.bos.includes(b.id); let can = pwr >= b.r; return `<div class="card" style="align-items:center; padding:20px; border-color:${def?'#2ecc71':'var(--pwr)'}"><i class="fa-solid ${b.i}" style="font-size:40px; color:${def?'#2ecc71':'var(--pwr)'}; margin-bottom:10px"></i><h3 style="font-size:16px; ${def?'text-decoration:line-through;color:#2ecc71':''}">${b.n}</h3>${def ? '<b style="color:#2ecc71; margin-top:10px; font-size:12px;">УНИЧТОЖЕН</b>' : `<div style="font-size:11px; color:var(--pwr); margin:10px 0;">Мощь: ${b.r}</div><div style="font-size:11px; display:flex; gap:10px; margin-bottom:15px;"><span><i class="fa-solid fa-coins" style="color:var(--gold)"></i> ${b.cg}</span><span><i class="fa-solid fa-gem" style="color:var(--crys)"></i> ${b.cc}</span><span><i class="fa-solid fa-box" style="color:#f5af19"></i> ${b.cx}</span></div><button class="btn-gen" style="background:var(--pwr); width:100%; font-size:12px;" ${can?'':'disabled'} onclick="ui.stB('${b.id}')">${can?'АТАКОВАТЬ':'СЛАБАЯ АРМИЯ'}</button>`}</div>`; }).join(''); },
+            
+            rdP() { 
+                document.getElementById('p-cur').innerText = g.s.sh; 
+                document.getElementById('p-gn').innerText = Math.floor((g.getRawStat('atk')+g.getRawStat('def'))/10000) || 0; 
+                
+                let sSnd = g.s.cfg.snd, sFx = g.s.cfg.fx;
+                document.getElementById('cfg-snd-st').innerText = sSnd ? "ВКЛ" : "ВЫКЛ";
+                document.getElementById('cfg-snd-st').style.color = sSnd ? "#2ecc71" : "var(--pwr)";
+                document.getElementById('cfg-fx-st').innerText = sFx ? "ВКЛ" : "ВЫКЛ";
+                document.getElementById('cfg-fx-st').style.color = sFx ? "#2ecc71" : "var(--pwr)";
+                
+                if(!sFx) { fx.ps = []; fx.cx.clearRect(0,0,fx.cv.width,fx.cv.height); }
+            },
+            
+            tglCfg(k) {
+                g.s.cfg[k] = !g.s.cfg[k];
+                g.sv();
+                this.rdP();
+                audio.clk();
+            },
+
+            opnS(m, id=null) {
+                g.selMode = m; g.selId = id; let lst = document.getElementById('ms-list'); lst.innerHTML = ''; document.getElementById('ms-title').innerText = m==='mrg'?"Пара для слияния":m==='art'?"Экипировка":"Отряд для экспедиции";
+                if(m==='mrg') {
+                    let c1 = g.s.col.find(x=>x.id===id); let cnds = g.s.col.filter(x=> x.id!==id && x.lvl===5 && x.r===c1.r && !g.s.exp.find(e=>e.id===x.id));
+                    lst.innerHTML = cnds.length ? cnds.map(c=>`<div class="panel" style="cursor:pointer; margin-bottom:0; font-size:12px;" onclick="g.mrg('${id}','${c.id}'); document.getElementById('m-sel').classList.remove('active'); ui.rdC();ui.rdT();"><b>${c.n}</b> (Выбрать)</div>`).join('') : "<div style='color:var(--pwr); font-size:12px;'>Нужно второе существо 5-го уровня, той же редкости, не в экспедиции.</div>";
+                } else if(m==='art') {
+                    let fr = [...g.s.arts].filter(a => !g.s.col.find(c=>c.art===a.uid));
+                    lst.innerHTML = fr.length ? fr.map(a=>{ let d = DB.arts.find(x=>x.id===a.id); return `<div class="panel" style="cursor:pointer; display:flex; align-items:center; gap:15px; margin-bottom:0;" onclick="g.eqp('${id}','${a.uid}'); document.getElementById('m-sel').classList.remove('active'); ui.rdC();ui.rdT();"><i class="fa-solid ${d.i}" style="color:${d.c||'var(--cyan)'}; font-size:20px;"></i> <div><b>${d.n}</b><br><span style="font-size:10px;color:var(--muted)">${d.d}</span></div></div>`; }).join('') : "<div style='color:var(--muted); font-size:12px;'>Инвентарь пуст. Ищите кейсы!</div>";
+                    lst.innerHTML += `<button class="btn-gen" style="background:transparent; color:var(--pwr); border: 1px solid var(--pwr); margin-top:10px; width:100%; font-size:12px;" onclick="g.eqp('${id}', ''); document.getElementById('m-sel').classList.remove('active'); ui.rdC();ui.rdT();">Снять артефакт</button>`;
+                } else if(m==='exp') {
+                    let cnds = g.s.col.filter(x=> !g.s.exp.find(e=>e.id===x.id));
+                    lst.innerHTML = cnds.length ? cnds.map(c=>`<div class="panel" style="cursor:pointer; margin-bottom:0; font-size:12px;" onclick="g.srtExp('${c.id}'); document.getElementById('m-sel').classList.remove('active'); ui.rdE();ui.rdT();"><b>${c.n}</b> <span style="color:var(--gold)">[Ур. ${c.lvl}]</span></div>`).join('') : "<div style='color:var(--muted); font-size:12px;'>Все заняты.</div>";
+                }
+                document.getElementById('m-sel').classList.add('active');
+            },
+
+            stB(id) {
+                g.stBat(id); if(!g.btl) return;
+                document.getElementById('mb-title').innerText = "БИТВА: " + g.btl.b.n; document.getElementById('mb-pdps').innerText = g.btl.pdps; document.getElementById('mb-bdps').innerText = g.btl.bdps; document.getElementById('m-bat').classList.add('active');
+                this.bInt = setInterval(() => {
+                    let r = g.tkBat(); if(!r) return clearInterval(this.bInt);
+                    if(r.w !== null) { clearInterval(this.bInt); document.getElementById('m-bat').classList.remove('active'); if(r.w === false) toast("Поражение", "Армия разбита", "fa-skull"); this.rdB(); this.rdT(); this.rdShp(); } else {
+                        let bp = Math.max(0, (r.st.bhp / r.st.maxB)*100); let pp = Math.max(0, (r.st.php / r.st.maxP)*100); let curBhp = Math.max(0, Math.floor(r.st.bhp)); let curPhp = Math.max(0, Math.floor(r.st.php));
+                        document.getElementById('mb-bhp-f').style.width = bp+'%'; document.getElementById('mb-bhp-t').innerText = curBhp; document.getElementById('mb-php-f').style.width = pp+'%'; document.getElementById('mb-php-t').innerText = curPhp;
+                    }
+                }, 200);
+            },
+            claimPromo() { let i = document.getElementById('promo-input'); if(g.prm(i.value.trim().toUpperCase())) { i.value = ''; this.rdA(); } },
+            expS() {
+                let code = btoa(encodeURIComponent(JSON.stringify(g.s)));
+                navigator.clipboard.writeText(code).then(() => toast("Экспорт", "Код скопирован в буфер обмена!", "fa-copy")).catch(()=> prompt("Скопируйте ваш код:", code));
+            },
+            impS() {
+                let code = prompt("Вставьте код сохранения:");
+                if(code) { try { let obj = JSON.parse(decodeURIComponent(atob(code))); g.s = obj; g.sv(); location.reload(); } catch(e) { toast("Ошибка", "Неверный код сохранения!", "fa-ban"); audio.err(); } }
+            }
+        };
+
+        window.onload = () => ui.init();
+    </script>
+</body>
+</html>
