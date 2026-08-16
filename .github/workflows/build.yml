@@ -15,7 +15,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-size: 20
+        node-version: 20
         architecture: x64
 
     - name: Install Dependencies
@@ -48,7 +48,7 @@ jobs:
         rm -rf Payload
 
     - name: Upload IPA Artifact
-      uses: actions/artifacts@v4
+      uses: actions/upload-artifact@v4
       with:
         name: CreatureRPG-iOS-Build
         path: build/artifacts/CreatureRPG.ipa
