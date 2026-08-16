@@ -1,0 +1,54 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-size: 20
+        architecture: x64
+
+    - name: Install Dependencies
+      run: |
+        npm install
+        npx cap init CreatureRPG com.yhidjd20del.creaturerpg --web-dir=.
+
+    - name: Add iOS Platform
+      run: |
+        npx cap add ios
+        npx cap sync ios
+
+    - name: Build and Archive iOS App
+      run: |
+        xcodebuild -workspace ios/App/App.xcworkspace \
+                   -scheme App \
+                   -sdk iphoneos \
+                   -configuration Release \
+                   archive -archivePath build/App.xcarchive \
+                   CODE_SIGNING_ALLOWED=NO \
+                   CODE_SIGNING_REQUIRED=NO \
+                   CODE_SIGN_IDENTITY=""
+
+    - name: Package to IPA
+      run: |
+        mkdir -p build/artifacts/Payload
+        cp -r build/App.xcarchive/Products/Applications/App.app build/artifacts/Payload/
+        cd build/artifacts
+        zip -r CreatureRPG.ipa Payload
+        rm -rf Payload
+
+    - name: Upload IPA Artifact
+      uses: actions/artifacts@v4
+      with:
+        name: CreatureRPG-iOS-Build
+        path: build/artifacts/CreatureRPG.ipa
