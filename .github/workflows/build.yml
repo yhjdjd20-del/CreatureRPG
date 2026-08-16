@@ -18,10 +18,15 @@ jobs:
         node-version: 20
         architecture: x64
 
+    - name: Prepare Web Directory
+      run: |
+        mkdir www
+        cp index.html www/
+
     - name: Install Dependencies
       run: |
         npm install
-        npx cap init CreatureRPG com.yhidjd20del.creaturerpg --web-dir=.
+        npx cap init CreatureRPG com.yhidjd20del.creaturerpg --web-dir=www
 
     - name: Add iOS Platform
       run: |
